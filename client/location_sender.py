@@ -86,13 +86,13 @@ def on_open(ws):
                     fp = urllib2.urlopen(_MAP_INFO_URL % current_map)
                     current_map_data = json.load(fp)["maps"][str(current_map)]
                     fp.close()
-    
+
                 data = {
                     "name": result.identity,
                     "map": result.context[7],
                     "face": -(math.atan2(result.fAvatarFront[2],result.fAvatarFront[0])*180/math.pi)%360
                 }
-    
+
                 if current_map_data:
                     data.update({
                         "continent": current_map_data["continent_id"],
@@ -113,12 +113,12 @@ def main():
     parser.add_argument('-p',default=8888,type=int,dest='port',help='Destination port')
     parser.add_argument('-q',action='store_true',dest='quiet',help="Don't print out all that crap")
     parser.add_argument('-k',dest='key',help="Secret key to join")
-    
-    
+
+
     args = parser.parse_args()
-    
+
     logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.WARNING if args.quiet else logging.DEBUG)
-    
+
     try:
         websocket.enableTrace(False)
         logging.debug("Connecting to %s on port %d", args.server, args.port)
