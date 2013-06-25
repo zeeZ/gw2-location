@@ -104,6 +104,7 @@ def on_open(ws):
 
 
 def main():
+    global _RUNNING
     parser = argparse.ArgumentParser(description='Player Location Sender Thing')
     parser.add_argument('server',help='Destination server address')
     parser.add_argument('-p',default=8888,type=int,dest='port',help='Destination port')

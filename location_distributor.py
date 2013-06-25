@@ -118,6 +118,7 @@ application = tornado.web.Application([
 
 
 def main():
+    global _NOTIFIER
     loglevels = {'debug': logging.DEBUG,
                  'info': logging.INFO,
                  'warn': logging.WARN,
@@ -133,6 +134,8 @@ def main():
 
     _NOTIFIER = Notifier()
     _NOTIFIER.start()
+    
+    
     http_server = tornado.httpserver.HTTPServer(application)
     logging.info("Listening on port %d", args.port)
     http_server.listen(args.port)
