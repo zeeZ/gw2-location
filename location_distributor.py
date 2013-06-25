@@ -95,7 +95,7 @@ class PublishHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         logging.debug("Location client disconnect")
         if self.player:
-            logging.debug("Removal of player", self.player.name, ":", "failed" if _PLAYERS.pop(self.player.name,None) == None else "success")
+            logging.debug("Removal of player %s: %s", self.player.name, "failed" if _PLAYERS.pop(self.player.name,None) == None else "success")
         else:
             logging.debug("No player attached")
 
