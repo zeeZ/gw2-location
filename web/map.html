@@ -24,8 +24,15 @@
             }
 	</style>
         <script>
-		
-		/* Don't laugh, ok? */
+			// Fancy socket conf
+			var host = "local.ctrl-alt-chainsaw.net";
+			var port = "8888";
+			var key = "SuperSecretGroupKey";
+
+			// You don't need to change that
+			var uri = "/players.json";
+
+			/* From here on out, don't laugh, OK? */
             var map;
 			var tyria;
 			var mists;
@@ -113,12 +120,8 @@
 			});
   
 			function connect() {
-				var ws;
-				var host = "local.ctrl-alt-chainsaw.net";
-				var port = "8888";
-				var uri = "/players.json/publicgroup";
-  
-				ws = new WebSocket("ws://" + host + ":" + port + uri);
+				var ws;  
+				ws = new WebSocket("ws://" + host + ":" + port + uri + '/' + key);
   
 				ws.onmessage = function (evt) {
 					// Somewhere in here we should check if the marker actually exists before we try to update it

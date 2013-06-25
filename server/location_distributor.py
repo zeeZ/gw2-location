@@ -168,9 +168,14 @@ def main():
     
     http_server = tornado.httpserver.HTTPServer(application)
     logging.info("Listening on port %d", args.port)
-    http_server.listen(args.port)
-    tornado.ioloop.IOLoop.instance().start()
-    _NOTIFIER.running = False # As if
+    try:
+        http_server.listen(args.port)
+        tornado.ioloop.IOLoop.instance().start()
+    except KeyboardInterrupt:
+        logging.info("Shutting down")
+        tornado.ioloop.IOLoop.instance().stop()
+        _NOTIFIER.running = False # As if
+        return
 
 
 if __name__ == "__main__":
