@@ -16,7 +16,6 @@ import tornado.web
 
 _NOTIFIER = None
 _PLAYERS = {}
-_GROUPS = {}
 
 
 # Location data is received as a .encode('base64) encoded str containing these fields
