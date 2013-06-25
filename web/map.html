@@ -8,168 +8,169 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.5.1/leaflet.css" />
         <style type="text/css">
             body {
-				text-align: center;
-				min-width: 500px;
+                text-align: center;
+                min-width: 500px;
             }
             .leaflet-container {
-				background: #fff;
+                background: #fff;
             }
   
             #map {
-				position: absolute;
-				top: 0;
-				right: 0;
-				bottom: 0;
-				left: 0;
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
             }
-	</style>
+	    </style>
         <script>
-			// Fancy socket conf
-			var host = "local.ctrl-alt-chainsaw.net";
-			var port = "8888";
-			var key = "SuperSecretGroupKey";
+            // Fancy socket conf
+            var host = "local.ctrl-alt-chainsaw.net";
+            var port = "8888";
+            var key = "SuperSecretGroupKey";
 
-			// You don't need to change that
-			var uri = "/players.json";
+            // You don't need to change that
+            var uri = "/players.json";
 
-			/* From here on out, don't laugh, OK? */
+            /* From here on out, don't laugh, OK? */
             var map;
-			var tyria;
-			var mists;
-			var layer_control;
-			var markers;
-			var players = {};
-			var continents;
-			var continent = 1;
-			var posIcon;
+            var tyria;
+            var mists;
+            var layer_control;
+            var markers;
+            var players = {};
+            var continents;
+            var continent = 1;
+            var posIcon;
       
             function unproject(coord) {
-				return map.unproject(coord, map.getMaxZoom());
+                return map.unproject(coord, map.getMaxZoom());
             }
       
             $(function () {
-				"use strict";
+                "use strict";
   
-				map = L.map("map", {
-					minZoom: 0,
-					maxZoom: 7,
-					crs: L.CRS.Simple,
-					zoomControl: true,
-					attributionControl: true
-				}).setView([0, 0], 0);
-				
-				L.control.attribution({prefix:false})
-				
-				
-				tyria = L.tileLayer("https://tiles.guildwars2.com/1/1/{z}/{x}/{y}.jpg", {
-					minZoom: 0,
-					maxZoom: 7,
-					continuousWorld: true,
-					attribution: "&copy; 2013 ArenaNet, Inc." // All rights reserved. NCsoft, the interlocking NC logo, ArenaNet, Guild Wars, Guild Wars Factions, Guild Wars Nightfall, Guild Wars: Eye of the North, Guild Wars 2, and all associated logos and designs are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the property of their respective owners."
-				}).addTo(map);
-				
-				tyria.max_bounds = [[0, 32768],[32768, 0]];
-				tyria.continent = 1;
-				
-				mists = L.tileLayer("https://tiles.guildwars2.com/2/1/{z}/{x}/{y}.jpg", {
-					minZoom: 0,
-					maxZoom: 6,
-					continuousWorld: true,
-					attribution: "&copy; 2013 ArenaNet, Inc." // All rights reserved. NCsoft, the interlocking NC logo, ArenaNet, Guild Wars, Guild Wars Factions, Guild Wars Nightfall, Guild Wars: Eye of the North, Guild Wars 2, and all associated logos and designs are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the property of their respective owners."
-				});
-				
-				mists.max_bounds = [[0, 16384],[16384, 4096]];
-				mists.continent = 2;
+                map = L.map("map", {
+                    minZoom: 0,
+                    maxZoom: 7,
+                    crs: L.CRS.Simple,
+                    zoomControl: true,
+                    attributionControl: true
+                }).setView([0, 0], 0);
+                
+                L.control.attribution({prefix:false})
+                
+                
+                tyria = L.tileLayer("https://tiles.guildwars2.com/1/1/{z}/{x}/{y}.jpg", {
+                    minZoom: 0,
+                    maxZoom: 7,
+                    continuousWorld: true,
+                    attribution: "&copy; 2013 ArenaNet, Inc." // All rights reserved. NCsoft, the interlocking NC logo, ArenaNet, Guild Wars, Guild Wars Factions, Guild Wars Nightfall, Guild Wars: Eye of the North, Guild Wars 2, and all associated logos and designs are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the property of their respective owners."
+                }).addTo(map);
+                
+                tyria.max_bounds = [[0, 32768],[32768, 0]];
+                tyria.continent = 1;
+                
+                mists = L.tileLayer("https://tiles.guildwars2.com/2/1/{z}/{x}/{y}.jpg", {
+                    minZoom: 0,
+                    maxZoom: 6,
+                    continuousWorld: true,
+                    attribution: "&copy; 2013 ArenaNet, Inc." // All rights reserved. NCsoft, the interlocking NC logo, ArenaNet, Guild Wars, Guild Wars Factions, Guild Wars Nightfall, Guild Wars: Eye of the North, Guild Wars 2, and all associated logos and designs are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the property of their respective owners."
+                });
+                
+                mists.max_bounds = [[0, 16384],[16384, 4096]];
+                mists.continent = 2;
 
-				var basemaps = {
-					"Tyria": tyria,
-					"Mists": mists
-				};
-				
-				continents = {1: tyria, 2: mists};
+                var basemaps = {
+                    "Tyria": tyria,
+                    "Mists": mists
+                };
+                
+                continents = {1: tyria, 2: mists};
   
-				var southWest = unproject([0, 32768]);
-				var northEast = unproject([32768, 0]);
+                var southWest = unproject([0, 32768]);
+                var northEast = unproject([32768, 0]);
   
-				map.setMaxBounds(new L.LatLngBounds(southWest, northEast));
-				
-				map.on('baselayerchange', function(event) { 
-					map.setMaxBounds(new L.LatLngBounds(unproject(event.layer.max_bounds[0]), unproject(event.layer.max_bounds[1])));
-					map.setView(unproject([event.layer.max_bounds[1][0]/2,event.layer.max_bounds[0][1]/2]), 0);
-					console.log('Caught baselayerchange');
-					
-					markers.eachLayer(function(layer) { layer._icon.style.display = (layer.continent != event.layer.continent) ? "none" : "block"; } );
-					continent = event.layer.continent;
-				});
+                map.setMaxBounds(new L.LatLngBounds(southWest, northEast));
+                
+                map.on('baselayerchange', function(event) { 
+                    map.setMaxBounds(new L.LatLngBounds(unproject(event.layer.max_bounds[0]), unproject(event.layer.max_bounds[1])));
+                    map.setView(unproject([event.layer.max_bounds[1][0]/2,event.layer.max_bounds[0][1]/2]), 0);
+                    console.log('Caught baselayerchange');
+                    
+                    markers.eachLayer(function(layer) { layer._icon.style.display = (layer.continent != event.layer.continent) ? "none" : "block"; } );
+                    continent = event.layer.continent;
+                });
   
-				posIcon = L.divIcon({
-					iconSize: [64, 64],
-					iconAnchor: [32, 32],
-					className: 'fancyPlayerPos',
-					html: '<img src="icons/player_position.png">'
-				});
-				
-				
-				var overlays = {
-					"Players": markers = L.layerGroup().addTo(map),
-				};
-				L.control.layers(basemaps, overlays).addTo(map);
-				
-				connect();
-				
-			});
+                posIcon = L.divIcon({
+                    iconSize: [64, 64],
+                    iconAnchor: [32, 32],
+                    className: 'fancyPlayerPos',
+                    html: '<img src="icons/player_position.png">'
+                });
+                
+                
+                var overlays = {
+                    "Players": markers = L.layerGroup().addTo(map),
+                };
+                L.control.layers(basemaps, overlays).addTo(map);
+                
+                connect();
+                
+            });
   
-			function connect() {
-				var ws;  
-				ws = new WebSocket("ws://" + host + ":" + port + uri + '/' + key);
+            function connect() {
+                var ws;  
+                ws = new WebSocket("ws://" + host + ":" + port + uri + '/' + key);
   
-				ws.onmessage = function (evt) {
-					// Somewhere in here we should check if the marker actually exists before we try to update it
-					$('#message').text(evt.data);
-					var json = $.parseJSON(evt.data);
-					
-					markers.eachLayer(function(layer) { layer.old = true; } );
-					
-					for (player in json) {
-						player = json[player];
-						if (player.name) {
-							if (players[player.name]) {
-								// Update from current players
-								players[player.name].old = false;
-								players[player.name].setLatLng(unproject(player.position));
-								players[player.name].update();
-							} else {
-								// Add new player
-								players[player.name] = 	L.marker(unproject(player.position), {
-									icon: posIcon,
-									title: player.name
-								}).addTo(markers);
-							}
-							players[player.name].continent = player.continent;
-							$(players[player.name]._icon).children().css({
-								transform: 'scale(0.75,0.75) rotate(' + player.face + 'deg)'
-							});
-							players[player.name]._icon.style.display = (player.continent != continent) ? "none" : "block";
-						}
-					}
-					
-					markers.eachLayer(function(layer) { if (layer.old) { delete players[layer.options.title]; markers.removeLayer(layer); } } );
-					
+                ws.onmessage = function (evt) {
+                    // Somewhere in here we should check if the marker actually exists before we try to update it
+                    $('#message').text(evt.data);
+                    var json = $.parseJSON(evt.data);
+                    
+                    markers.eachLayer(function(layer) { layer.old = true; } );
+                    
+                    for (player in json) {
+                        player = json[player];
+                        if (player.name) {
+                            if (players[player.name]) {
+                                // Update from current players
+                                players[player.name].old = false;
+                                players[player.name].setLatLng(unproject(player.position));
+                                players[player.name].update();
+                            } else {
+                                // Add new player
+                                players[player.name] =     L.marker(unproject(player.position), {
+                                    icon: posIcon,
+                                    title: player.name
+                                }).addTo(markers);
+                            }
+                            players[player.name].continent = player.continent;
+                            $(players[player.name]._icon).children().css({
+                                transform: 'scale(0.75,0.75) rotate(' + player.face + 'deg)'
+                            });
+                            players[player.name]._icon.style.display = (player.continent != continent) ? "none" : "block";
+                        }
+                    }
+                    
+                    markers.eachLayer(function(layer) { if (layer.old) { delete players[layer.options.title]; markers.removeLayer(layer); } } );
+                    
 
-				};
-				
+                };
+                
   
-				ws.onclose = function (evt) {
-					console.log("Connection close");
-					setTimeout(connect, 5000);
-				};
+                ws.onclose = function (evt) {
+                    console.log("Connection close");
+                    setTimeout(connect, 5000);
+                };
   
-				ws.onopen = function (evt) {
-					console.log("Connection open");
-				};
-			}
+                ws.onopen = function (evt) {
+                    console.log("Connection open");
+                };
+            }
         </script>
     </head>
     <body>
-      <div id="map"></div>
+        <div id="map"></div>
+    </body>
 </html>
