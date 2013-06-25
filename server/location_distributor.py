@@ -114,7 +114,7 @@ class PublishHandler(tornado.websocket.WebSocketHandler):
     player = None
     key = None
 
-    def open(self, key=''):
+    def open(self, key=None):
         self.key = hash(key)
         logging.debug("Location client connect for key '%s' hash %d", key, self.key)
         if not self.key in _PLAYERS:
