@@ -99,28 +99,36 @@ def on_open(ws):
                         })
                     logging.debug(data)
                     ws.send(json.dumps(data).encode("base64"))
-            time.sleep(.1)
+            time.sleep(ws.frequency)
         ws.close()
     thread.start_new_thread(run, ())
 
 
 def main():
     global _RUNNING
+    loglevels = {'debug': logging.DEBUG,
+                 'info': logging.INFO,
+                 'warn': logging.WARN,
+                 'error': logging.ERROR
+                 }
+
     parser = argparse.ArgumentParser(description='Player Location Sender Thing')
     parser.add_argument('server',help='Destination server address')
     parser.add_argument('-p',default=8888,type=int,dest='port',help='Destination port')
-    parser.add_argument('-q',action='store_true',dest='quiet',help="Don't print out all that crap")
+    parser.add_argument('-f',default=0.1,type=float,dest='frequency',help='Update frequency')
+    parser.add_argument('-l',default='info',choices=loglevels.keys(),dest='loglevel',help='Log level')
     parser.add_argument('-k',default='',dest='key',help="Secret key to join")
 
     args = parser.parse_args()
 
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.WARNING if args.quiet else logging.DEBUG)
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loglevels[args.loglevel])
 
     try:
         websocket.enableTrace(False)
         logging.debug("Connecting to %s on port %d", args.server, args.port)
         ws = websocket.WebSocketApp("ws://%s:%d/publish%s" % (args.server, args.port, "/%s" % args.key))
         ws.on_open = on_open
+        ws.frequency = args.frequency
         ws.run_forever()
         # We should probably reconnect on disconnect...
     except KeyboardInterrupt:

@@ -101,12 +101,12 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def open(self, key=''):
         # New connection
         self.key = hash(key)
-        logging.debug("WebSocket client connect with key '%s' hash %d", key, self.key)
+        logging.info("WebSocket client connect with key '%s' hash %d", key, self.key)
         _NOTIFIER.register(self)
 
     def on_close(self):
         # Connection closed
-        logging.debug("WebSocket client disconnect")
+        logging.info("WebSocket client disconnect with hash %d", self.key)
         _NOTIFIER.unregister(self)
 
 
@@ -116,7 +116,7 @@ class PublishHandler(tornado.websocket.WebSocketHandler):
 
     def open(self, key=''):
         self.key = hash(key)
-        logging.debug("Location client connect for key '%s' hash %d", key, self.key)
+        logging.info("Location client connect for key '%s' hash %d", key, self.key)
         if not self.key in _PLAYERS:
             _PLAYERS[self.key] = set()
         self.player = Player(self.key)
@@ -127,7 +127,7 @@ class PublishHandler(tornado.websocket.WebSocketHandler):
 
 
     def on_close(self):
-        logging.debug("Location client disconnect")
+        logging.info("Location client disconnect for hash %d", self.key)
         _PLAYERS[self.key].discard(self.player)
         if len(_PLAYERS[self.key]) == 0:
             del _PLAYERS[self.key]
