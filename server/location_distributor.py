@@ -98,7 +98,7 @@ class Notifier(threading.Thread):
 
 
 class WSHandler(tornado.websocket.WebSocketHandler):
-    def open(self, key):
+    def open(self, key=''):
         # New connection
         self.key = hash(key)
         logging.debug("WebSocket client connect with key '%s' hash %d", key, self.key)
@@ -114,7 +114,7 @@ class PublishHandler(tornado.websocket.WebSocketHandler):
     player = None
     key = None
 
-    def open(self, key=None):
+    def open(self, key=''):
         self.key = hash(key)
         logging.debug("Location client connect for key '%s' hash %d", key, self.key)
         if not self.key in _PLAYERS:

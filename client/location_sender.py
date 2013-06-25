@@ -110,8 +110,7 @@ def main():
     parser.add_argument('server',help='Destination server address')
     parser.add_argument('-p',default=8888,type=int,dest='port',help='Destination port')
     parser.add_argument('-q',action='store_true',dest='quiet',help="Don't print out all that crap")
-    parser.add_argument('-k',dest='key',help="Secret key to join")
-
+    parser.add_argument('-k',default='',dest='key',help="Secret key to join")
 
     args = parser.parse_args()
 
@@ -120,7 +119,7 @@ def main():
     try:
         websocket.enableTrace(False)
         logging.debug("Connecting to %s on port %d", args.server, args.port)
-        ws = websocket.WebSocketApp("ws://%s:%d/publish%s" % (args.server, args.port, "/%s" % args.key if args.key else ''))
+        ws = websocket.WebSocketApp("ws://%s:%d/publish%s" % (args.server, args.port, "/%s" % args.key))
         ws.on_open = on_open
         ws.run_forever()
         # We should probably reconnect on disconnect...
