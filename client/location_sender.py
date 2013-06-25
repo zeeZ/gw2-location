@@ -4,14 +4,16 @@ import urllib2
 import math
 import argparse
 import logging
-
-import ctypes
+import thread
 
 try: import simplejson as json
 except ImportError: import json
 
+# https://pypi.python.org/pypi/ctypes/
+import ctypes
+
+# https://pypi.python.org/pypi/websocket-client/
 import websocket
-import thread
 
 
 _MULTIPLIER = 39.3701 # meters to inches
