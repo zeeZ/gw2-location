@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import threading
 import time
 import urllib2
@@ -37,7 +38,7 @@ class Player(object):
                                             #        ( point[0]-map_rect[0][0])/(map_rect[1][0]-map_rect[0][0])*(continent_rect[1][0]-continent_rect[0][0])+continent_rect[0][0],
                                             #        (-point[1]-map_rect[0][1])/(map_rect[1][1]-map_rect[0][1])*(continent_rect[1][1]-continent_rect[0][1])+continent_rect[0][1]
                                             #    )
-    
+
 
 
 class PlayerEncoder(json.JSONEncoder):
@@ -120,10 +121,10 @@ class PublishHandler(tornado.websocket.WebSocketHandler):
             _PLAYERS[self.key] = set()
         self.player = Player(self.key)
         _PLAYERS[self.key].add(self.player)
-    
+
     def get(self):
         logging.debug("Got self")
-    
+
 
     def on_close(self):
         logging.debug("Location client disconnect")
@@ -164,8 +165,8 @@ def main():
 
     _NOTIFIER = Notifier(args.frequency)
     _NOTIFIER.start()
-    
-    
+
+
     http_server = tornado.httpserver.HTTPServer(application)
     logging.info("Listening on port %d", args.port)
     try:
