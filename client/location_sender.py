@@ -6,12 +6,10 @@ import math
 import argparse
 import logging
 import thread
+import ctypes
 
 try: import simplejson as json
 except ImportError: import json
-
-# https://pypi.python.org/pypi/ctypes/
-import ctypes
 
 # https://pypi.python.org/pypi/websocket-client/
 import websocket
