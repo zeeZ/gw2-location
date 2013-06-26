@@ -99,6 +99,7 @@ def on_open(ws):
                         })
                     logging.debug(data)
                     ws.send(json.dumps(data).encode("base64"))
+            previous_tick = result.uiTick
             time.sleep(ws.frequency)
         ws.close()
     thread.start_new_thread(run, ())

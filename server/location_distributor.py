@@ -25,6 +25,7 @@ _PLAYERS = {}
 class Player(object):
     def __init__(self, key):
         self._key = key
+        self._last_update = 0
 
     def _update(self, data):
         self.name = data['name']            # str identity
@@ -38,6 +39,7 @@ class Player(object):
                                             #        ( point[0]-map_rect[0][0])/(map_rect[1][0]-map_rect[0][0])*(continent_rect[1][0]-continent_rect[0][0])+continent_rect[0][0],
                                             #        (-point[1]-map_rect[0][1])/(map_rect[1][1]-map_rect[0][1])*(continent_rect[1][1]-continent_rect[0][1])+continent_rect[0][1]
                                             #    )
+        self._last_update = time.time()
 
 
 
@@ -52,11 +54,12 @@ class PlayerEncoder(json.JSONEncoder):
 
 
 class Notifier(threading.Thread):
-    def __init__(self, freq):
+    def __init__(self, args):
         threading.Thread.__init__(self)
         self.clients = {}
         self.running = True
-        self.frequency = freq
+        self.frequency = args.frequency
+        self.timeout = args.timeout
 
     def register(self, client):
         if client.key not in self.clients:
@@ -75,12 +78,12 @@ class Notifier(threading.Thread):
                 del self.clients[client.key]
         logging.debug("There are now %d keys left", len(self.clients.keys()))
 
-    def run(self, ):
+    def run(self):
         logging.debug("Notifier started")
         while self.running:
             try:
                 for key, clients in self.clients.items():
-                    output = json.dumps(_PLAYERS.get(key,()), cls=PlayerEncoder)
+                    output = json.dumps([player for player in _PLAYERS.get(key,()) if player._last_update > time.time()-self.timeout], cls=PlayerEncoder)
                     for client in clients:
                         try:
                             client.write_message(output)
@@ -159,11 +162,12 @@ def main():
     parser.add_argument('-p',default=8888,type=int,dest='port',help='Listen port for the WebSocket')
     parser.add_argument('-l',default='info',choices=loglevels.keys(),dest='loglevel',help='Log level')
     parser.add_argument('-f',default=0.1,type=float,dest='frequency',help='Web client update frequency')
+    parser.add_argument('-t',default=60,type=int,dest='timeout',help='Timeout in seconds for clients without location updates')
     args = parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loglevels[args.loglevel])
 
-    _NOTIFIER = Notifier(args.frequency)
+    _NOTIFIER = Notifier(args)
     _NOTIFIER.start()
 
 
