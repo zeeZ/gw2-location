@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+import sys
 import time
 import mmap
 import urllib2
@@ -12,8 +13,11 @@ try: import simplejson as json
 except ImportError: import json
 
 # https://pypi.python.org/pypi/websocket-client/
-import websocket
-
+try:
+    import websocket
+except ImportError:
+    print "websocket-client required, get it at https://github.com/liris/websocket-client/"
+    sys.exit(1)
 
 _MULTIPLIER = 39.3701 # meters to inches
 _MAP_INFO_URL = "https://api.guildwars2.com/v1/maps.json?map_id=%d"

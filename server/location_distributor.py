@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+import sys
 import threading
 import time
 import urllib2
@@ -9,12 +10,15 @@ try: import simplejson as json
 except ImportError: import json
 
 # https://pypi.python.org/pypi/tornado/
-import tornado
-import tornado.httpserver
-import tornado.websocket
-import tornado.ioloop
-import tornado.web
-
+try:
+    import tornado
+    import tornado.httpserver
+    import tornado.websocket
+    import tornado.ioloop
+    import tornado.web
+except ImportError:
+    print "Tornado framework required, get it at http://www.tornadoweb.org/"
+    sys.exit(1)
 
 _NOTIFIER = None
 _PLAYERS = {}
