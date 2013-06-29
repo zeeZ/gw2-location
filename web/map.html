@@ -149,7 +149,9 @@
                             $(players[player.name]._icon).children().css({
                                 transform: 'scale(0.75,0.75) rotate(' + player.face + 'deg)'
                             });
-                            players[player.name]._icon.style.display = (player.continent != continent) ? "none" : "block";
+                            if (players[player.name]._icon) {
+                                players[player.name]._icon.style.display = (player.continent != continent) ? "none" : "block";
+                            }
                         }
                     }
 
