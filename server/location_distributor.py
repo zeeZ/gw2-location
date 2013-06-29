@@ -18,9 +18,10 @@ import tornado.web
 
 _NOTIFIER = None
 _PLAYERS = {}
+_LOCK = threading.Lock()
 
 
-# Location data is received as a .encode('base64) encoded str containing these fields
+# Location data is received as a .encode('base64') encoded str containing these fields
 
 class Player(object):
     def __init__(self, key):
@@ -62,35 +63,38 @@ class Notifier(threading.Thread):
         self.timeout = args.timeout
 
     def register(self, client):
-        if client.key not in self.clients:
-            logging.debug("New key: %s", client.key)
-            self.clients[client.key] = set()
-        self.clients[client.key].add(client)
+        with _LOCK:
+            if client.key not in self.clients:
+                logging.debug("New key: %s", client.key)
+                self.clients[client.key] = set()
+            self.clients[client.key].add(client)
         logging.debug("Client registered for %s", client.key)
 
     def unregister(self, client):
         logging.debug("Client unregistering for %s", client.key)
-        if client.key in self.clients:
-            self.clients[client.key].remove(client)
-            logging.debug("Client key removed")
-            if len(self.clients[client.key]) == 0:
-                logging.debug("No more clients for key %s", client.key)
-                del self.clients[client.key]
+        with _LOCK:
+            if client.key in self.clients:
+                self.clients[client.key].remove(client)
+                logging.debug("Client key removed")
+                if len(self.clients[client.key]) == 0:
+                    logging.debug("No more clients for key %s", client.key)
+                    del self.clients[client.key]
         logging.debug("There are now %d keys left", len(self.clients.keys()))
 
     def run(self):
         logging.debug("Notifier started")
         while self.running:
             try:
-                for key, clients in self.clients.items():
-                    output = json.dumps([player for player in _PLAYERS.get(key,()) if player._last_update > time.time()-self.timeout], cls=PlayerEncoder)
-                    for client in clients:
-                        try:
-                            client.write_message(output)
-                        except Exception, e:
-                            # Look, effort!
-                            logging.error("Exception while sending or something")
-                            logging.exception(e)
+                with _LOCK:
+                    for key, clients in self.clients.items():
+                        output = json.dumps([player for player in _PLAYERS.get(key,()) if player._last_update > time.time()-self.timeout], cls=PlayerEncoder)
+                        for client in clients:
+                            try:
+                                client.write_message(output)
+                            except Exception, e:
+                                # Look, effort!
+                                logging.error("Exception while sending or something")
+                                logging.exception(e)
             except Exception, e:
                 # Look, effort!
                 logging.error("Exception in outer loop or something")
