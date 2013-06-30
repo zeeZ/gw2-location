@@ -1,22 +1,24 @@
 #!/usr/bin/env python2
-import sys
-import time
-import mmap
-import urllib2
-import math
 import argparse
-import logging
-import thread
 import ctypes
+import logging
+import math
+import mmap
+import sys
+import thread
+import time
+import urllib2
 
 try: import simplejson as json
 except ImportError: import json
 
-# https://pypi.python.org/pypi/websocket-client/
+# https://pypi.python.org/pypi/tornado/
 try:
-    import websocket
+    import tornado
+    import tornado.ioloop
+    import tornado.websocket
 except ImportError:
-    print "websocket-client required, get it at https://github.com/liris/websocket-client/"
+    print "Tornado framework required, get it at http://www.tornadoweb.org/"
     sys.exit(1)
 
 _MULTIPLIER = 39.3701 # meters to inches
@@ -102,10 +104,11 @@ def on_open(ws):
                         "position": continent_coords(current_map_data["continent_rect"], current_map_data["map_rect"], (result.fAvatarPosition[0]*_MULTIPLIER, result.fAvatarPosition[2]*_MULTIPLIER))
                         })
                     logging.debug(data)
-                    ws.send(json.dumps(data).encode("base64"))
+                    con.write_message(json.dumps(data).encode("base64"))
             previous_tick = result.uiTick
             time.sleep(ws.frequency)
         ws.close()
+    con = ws.result()
     thread.start_new_thread(run, ())
 
 
@@ -128,17 +131,21 @@ def main():
 
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loglevels[args.loglevel])
 
-    try:
-        websocket.enableTrace(False)
+    try:        
+        io = tornado.ioloop.IOLoop.instance()
+        
+        # Empty callback to allow KeyboardInterrupt to slip through
+        tornado.ioloop.PeriodicCallback(lambda: None, 1000, io).start()
+        
         logging.debug("Connecting to %s on port %d", args.server, args.port)
-        ws = websocket.WebSocketApp("ws://%s:%d/publish%s" % (args.server, args.port, "/%s" % args.key))
-        ws.on_open = on_open
+        ws = tornado.websocket.websocket_connect("ws://%s:%d/publish%s" % (args.server, args.port, "/%s" % args.key))
         ws.frequency = args.frequency
-        ws.run_forever()
+        ws.add_done_callback(on_open)
+        io.start()
         # We should probably reconnect on disconnect...
     except KeyboardInterrupt:
-        # That actually doesn't do anything
         _RUNNING = False
+        tornado.ioloop.IOLoop.instance().stop()
 
 
 if __name__ == "__main__":

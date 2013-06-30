@@ -1,10 +1,10 @@
 #!/usr/bin/env python2
+import argparse
+import logging
 import sys
 import threading
 import time
 import urllib2
-import argparse
-import logging
 
 try: import simplejson as json
 except ImportError: import json
@@ -13,9 +13,9 @@ except ImportError: import json
 try:
     import tornado
     import tornado.httpserver
-    import tornado.websocket
     import tornado.ioloop
     import tornado.web
+    import tornado.websocket
 except ImportError:
     print "Tornado framework required, get it at http://www.tornadoweb.org/"
     sys.exit(1)
@@ -81,9 +81,9 @@ class Notifier(threading.Thread):
                 self.clients[client.key].remove(client)
                 logging.debug("Client key removed")
                 if len(self.clients[client.key]) == 0:
-                    logging.debug("No more clients for key %s", client.key)
+                    logging.info("No more clients for key %s", client.key)
                     del self.clients[client.key]
-        logging.debug("There are now %d keys left", len(self.clients.keys()))
+        logging.info("There are now %d keys left", len(self.clients.keys()))
 
     def run(self):
         logging.debug("Notifier started")
@@ -105,19 +105,19 @@ class Notifier(threading.Thread):
                 logging.exception(e)
             time.sleep(self.frequency)
         # Should do something about this
-        logging.debug("Notifier stopped")
+        logging.warn("Notifier stopped")
 
 
 class WSHandler(tornado.websocket.WebSocketHandler):
     def open(self, key=''):
         # New connection
         self.key = hash(key)
-        logging.info("WebSocket client connect with key '%s' hash %d", key, self.key)
+        logging.info("WebSocket client %s connect with key '%s' hash %d", self.request.remote_ip, key, self.key)
         _NOTIFIER.register(self)
 
     def on_close(self):
         # Connection closed
-        logging.info("WebSocket client disconnect with hash %d", self.key)
+        logging.info("WebSocket client %s disconnect with hash %d", self.request.remote_ip, self.key)
         _NOTIFIER.unregister(self)
 
 
@@ -127,29 +127,25 @@ class PublishHandler(tornado.websocket.WebSocketHandler):
 
     def open(self, key=''):
         self.key = hash(key)
-        logging.info("Location client connect for key '%s' hash %d", key, self.key)
+        logging.info("Location client %s connect for key '%s' hash %d", self.request.remote_ip, key, self.key)
         if not self.key in _PLAYERS:
             _PLAYERS[self.key] = set()
         self.player = Player(self.key)
         _PLAYERS[self.key].add(self.player)
 
-    def get(self):
-        logging.debug("Got self")
-
-
     def on_close(self):
-        logging.info("Location client disconnect for hash %d", self.key)
+        logging.info("Location client %s disconnect for hash %d", self.request.remote_ip, self.key)
         _PLAYERS[self.key].discard(self.player)
         if len(_PLAYERS[self.key]) == 0:
             del _PLAYERS[self.key]
-            logging.debug("No more players for %s", self.key)
-        logging.debug("There are now %s players left", len(_PLAYERS))
+            logging.info("No more players for %s", self.key)
+        logging.info("There are now %s players left", len(_PLAYERS))
 
     def on_message(self, message):
-        logging.debug("Received player location message")
         message = message.decode("base64")
         data = json.loads(message)
         self.player._update(data)
+        logging.debug("Received player '%s' location message", self.player.name)
 
 
 application = tornado.web.Application([
@@ -183,6 +179,10 @@ def main():
     logging.info("Listening on port %d", args.port)
     try:
         http_server.listen(args.port)
+        
+        # Empty callback to allow KeyboardInterrupt to slip through
+        tornado.ioloop.PeriodicCallback(lambda: None, 1000, tornado.ioloop.IOLoop.instance()).start()
+        
         tornado.ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:
         logging.info("Shutting down")
