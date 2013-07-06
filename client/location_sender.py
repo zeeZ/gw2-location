@@ -5,7 +5,7 @@ import logging
 import math
 import mmap
 import sys
-import thread
+import threading
 import time
 import urllib2
 
@@ -21,7 +21,7 @@ except ImportError:
     print "Tornado framework required, get it at http://www.tornadoweb.org/"
     sys.exit(1)
 
-_MULTIPLIER = 39.3701 # meters to inches
+_MULTIPLIER = 39.3701  # meters to inches
 _MAP_INFO_URL = "https://api.guildwars2.com/v1/maps.json?map_id=%d"
 _RUNNING = True
 
@@ -59,7 +59,7 @@ def continent_coords(continent_rect, map_rect, point):
 
 
 def on_open(ws):
-    def run(*args):
+    def run():
         logging.debug("Initializing MumbleLink thingy")
         current_map = 0
         current_map_data = None
@@ -87,9 +87,15 @@ def on_open(ws):
                     # Map change
                     logging.debug("Player changed maps (%d->%d)", current_map, result.context[7])
                     current_map = result.context[7]
-                    fp = urllib2.urlopen(_MAP_INFO_URL % current_map)
-                    current_map_data = json.load(fp)["maps"][str(current_map)]
-                    fp.close()
+                    try:
+                        fp = urllib2.urlopen(_MAP_INFO_URL % current_map)
+                        current_map_data = json.load(fp)["maps"][str(current_map)]
+                        fp.close()
+                    except urllib2.HTTPError:
+                        logging.warning("API call for current map information failed")
+                        current_map_data = None
+                        current_map = 0
+                        time.sleep(ws.args.retry_delay)
 
                 data = {
                     "name": result.identity,
@@ -106,10 +112,20 @@ def on_open(ws):
                     logging.debug(data)
                     con.write_message(json.dumps(data).encode("base64"))
             previous_tick = result.uiTick
-            time.sleep(ws.frequency)
-        ws.close()
+            time.sleep(ws.args.frequency)
+
+    def status():
+        if ws.thread != None and not ws.thread.is_alive():
+            logging.info("Restarting update thread")
+            start_thread()
+
+    def start_thread():
+        ws.thread = threading.Thread(target=run)
+        ws.thread.start()
+
     con = ws.result()
-    thread.start_new_thread(run, ())
+    start_thread()
+    tornado.ioloop.PeriodicCallback(status, 1000, tornado.ioloop.IOLoop.instance()).start()
 
 
 def main():
@@ -121,11 +137,12 @@ def main():
                  }
 
     parser = argparse.ArgumentParser(description='Player Location Sender Thing')
-    parser.add_argument('server',help='Destination server address')
-    parser.add_argument('-p',default=8888,type=int,dest='port',help='Destination port')
-    parser.add_argument('-f',default=0.1,type=float,dest='frequency',help='Update frequency')
-    parser.add_argument('-l',default='info',choices=loglevels.keys(),dest='loglevel',help='Log level')
-    parser.add_argument('-k',default='',dest='key',help="Secret key to join")
+    parser.add_argument('server', help='Destination server address')
+    parser.add_argument('-p', default=8888, type=int, dest='port', help='Destination port')
+    parser.add_argument('-f', default=0.1, type=float, dest='frequency', help='Update frequency in seconds')
+    parser.add_argument('-r', default=5.0, type=float, dest='retry_delay', help='API call retry delay in seconds')
+    parser.add_argument('-l', default='info', choices=loglevels.keys(), dest='loglevel', help='Log level')
+    parser.add_argument('-k', default='', dest='key', help="Secret key to join")
 
     args = parser.parse_args()
 
@@ -139,7 +156,7 @@ def main():
         
         logging.debug("Connecting to %s on port %d", args.server, args.port)
         ws = tornado.websocket.websocket_connect("ws://%s:%d/publish%s" % (args.server, args.port, "/%s" % args.key))
-        ws.frequency = args.frequency
+        ws.args = args
         ws.add_done_callback(on_open)
         io.start()
         # We should probably reconnect on disconnect...
